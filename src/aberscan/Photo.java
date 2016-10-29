@@ -1,5 +1,9 @@
 package aberscan;
 
+//import PhotoDirectory;
+
+//import PhotoDirectory;
+
 import java.awt.Image;
 import java.awt.List;
 import java.awt.Rectangle;
@@ -9,21 +13,38 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
 public class Photo {
 	File srcFile;
 	Image image;
 	Rectangle imageRect;
+	Rectangle cropImageRect;
 	Rectangle adjustedImageRect;
+	Rectangle cropAdjustedImageRect;
 	boolean copyFlag;
 	boolean editFlag;
 	boolean exportedFlag;
 	TagList tags;
 
-    
     public Photo(File sFile) {
     	srcFile = sFile;
        	imageRect = new Rectangle(0,0,0,0); 	//don't known size until loaded
+    	cropImageRect = new Rectangle(0,0,0,0);
+    	adjustedImageRect = new Rectangle(0,0,0,0);
+    	cropAdjustedImageRect = new Rectangle(0,0,0,0);
+    	this.copyFlag = false;
+    	this.editFlag = false;
+    	this.exportedFlag = false;
+    	this.image = null;
+    	tags = new TagList();
+    }
+    
+    public Photo(File sFile, Rectangle srcCrop) {
+    	srcFile = sFile;
+       	imageRect = new Rectangle(0,0,0,0); 	//don't known size until loaded
+       	cropImageRect = new Rectangle(0,0,0,0);
+    	cropAdjustedImageRect = srcCrop;
     	adjustedImageRect = new Rectangle(0,0,0,0);
     	this.copyFlag = false;
     	this.editFlag = false;
@@ -38,6 +59,8 @@ public class Photo {
     public Image getImage() { return image; }
     public void setImage(Image img) { image = img; }
     public Rectangle getImageRect() { return imageRect; }
+    public Rectangle getCropImageRect() { return cropImageRect; }
+    public Rectangle getCropAdjustedImageRect() { return cropAdjustedImageRect; }
     public Rectangle getAdjustedImageRect() { return adjustedImageRect; }
     public boolean getCopyFlag() { return copyFlag; }
     public boolean getEditFlag() { return editFlag; }
@@ -53,6 +76,9 @@ public class Photo {
     public void setAdjustedImageRect(double x, double y, int width, int height) { adjustedImageRect = new Rectangle((int) x, (int) y, width, height);}
     public Photo reset() { return( new Photo(srcFile)); }
     public void setCopyFlag(boolean flag) { copyFlag = flag; }
+    public void setCropImageRect(Rectangle cRect) { cropImageRect = new Rectangle(cRect); }
+    public void setCropAdjustedImageRect(Rectangle cRect) { cropAdjustedImageRect = new Rectangle(cRect);}
+    public void setAdjustedImageRect(Rectangle aRect) { adjustedImageRect = new Rectangle(aRect);}
     public void setEditFlag(boolean flag) { editFlag = flag; }
     public void setExportedFlag(boolean flag) { exportedFlag = flag; }
     public void setTagText(int i, String tag) { tags.setText(i, tag); }
@@ -73,6 +99,53 @@ public class Photo {
     		exportedFlag = true;
     	}
     	
+    }
+    
+    public void copyPhoto( File copyDir) throws IOException {
+    	//System.out.println("Copying file : '" + srcFile.getAbsolutePath() + "' to Folder '" + destDir.getAbsolutePath() + "'");
+    		FileUtils.copyFileToDirectory(srcFile, copyDir);
+    }
+    
+    public void backupPhoto(File backupDir) throws IOException {
+    	//System.out.println("Copying file : '" + srcFile.getAbsolutePath() + "' to Folder '" + destDir.getAbsolutePath() + "'");
+    		FileUtils.copyFileToDirectory(srcFile, backupDir);
+    }
+    
+    public void cropPhoto() throws IOException {
+		String exePath = "D:\\Program Files (x86)\\ImageMagick-6.8.7-Q16\\convert.exe";
+		String command = "-crop";
+		Rectangle cropRect = this.getCropImageRect();
+		//String srcFileName = srcFile.getName();
+		//String destFileName = photoDir.getCropDirectory().getAbsolutePath() + "\\" + srcFileName;
+		
+    	//System.out.println("Copying file : '" + srcFile.getAbsolutePath() + "' to Folder '" + destDir.getAbsolutePath() + "'");
+    	//FileUtils.copyFileToDirectory(srcFile, cropDir);
+    		
+		// construct the cmdLine
+		// first, build up the crop argument (e.g. width x height + ex + wy)
+		// the reduction by 100/102 is a hack because photos sized 16:9 still need to be zoomed up to 102% to fill the screen horizontally
+		String rectInfo = (int)(cropRect.getWidth()) + "x"+ (int) (cropRect.getHeight()*100/100) + "+" + (int)(cropRect.getX()) + "+" + (int)(cropRect.getY());
+		String [] cmdLine = new String [] { exePath, srcFile.getAbsolutePath(), command, rectInfo, srcFile.getAbsolutePath() };
+		
+		//Print out the cmdLine doing the crop
+		//print();
+		//System.out.println("cmdLine = ");
+		//for(int i = 0 ; i < cmdLine.length ; i++ ) {
+		//	System.out.println(cmdLine[i]);
+		//}
+
+		try {
+			Process p = Runtime.getRuntime().exec(cmdLine);
+			try {
+				p.waitFor();
+			} catch (InterruptedException e) {
+
+				e.printStackTrace();
+			} //wait for the exec to finish
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}
     }
     
     public void rotatePhoto(boolean rotateLeft) throws IOException {
@@ -233,6 +306,7 @@ public class Photo {
     public void print(){
     	System.out.println("Photo: \n\tfileName = " + getName() + 
     			"\n\timageRect = " + imageRect.toString() + 
+    			"\n\tcropImageRect = " + cropImageRect.toString() + 
     			"\n\tadjustedImageRect = " + adjustedImageRect.toString() +
     			"\n\teditFlag = " + editFlag + 
     			"\n\tcopyFlag = " + copyFlag + 
