@@ -1,10 +1,15 @@
 package aberscan;
 
+import java.awt.Rectangle;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+
+import javax.swing.JOptionPane;
+
+import org.apache.commons.io.FileUtils;
 
 public class PhotoList {
 	ArrayList <Photo> photos;
@@ -88,6 +93,55 @@ public class PhotoList {
        }
 
     }
+    
+    public void cropPhotos() {
+    	// go through each photo, work out the crop rectangle based on orig size, then do the crop
+    	for (Photo photo : photos){
+    		//Is there a crop Rectangle defined for this photo?
+    		if(photo.getCropAdjustedImageRect().getWidth() != 0 && photo.getCropAdjustedImageRect().getHeight() != 0 ) {
+    			
+    			// calculate the cropRectangle back in the original image coordinate system
+    			// note that to do the calculation, you have to assume the adjustedImageRect (x,y) is (0,0). 
+    			// so the crop x.y calculation is relative to the adjustedImage, not to the actual orgin
+    			
+    			double widthRatio = photo.getImageRect().getWidth()/photo.getAdjustedImageRect().getWidth();
+    			double heightRatio = photo.getImageRect().getHeight()/photo.getAdjustedImageRect().getHeight();
+    			
+    			Rectangle cropImageRect = new Rectangle((int) ((photo.getCropAdjustedImageRect().getX() - photo.getAdjustedImageRect().getX())  * widthRatio),
+    									(int) ((photo.getCropAdjustedImageRect().getY() - photo.getAdjustedImageRect().getY()) * heightRatio),
+    									(int) (photo.getCropAdjustedImageRect().getWidth() * widthRatio),
+    									(int) (photo.getCropAdjustedImageRect().getHeight() * heightRatio));
+    			photo.setCropImageRect(cropImageRect);
+    			
+    			//System.out.println("Width Ratio = " + widthRatio + "\n\tVertical Ratio = "+ heightRatio); 
+    			//System.out.println("Crop Rect = " + cropImageRect.toString());
+    			
+    			//Now do the crop
+    			try {
+    				photo.cropPhoto();
+    			} catch (IOException e) {
+    				e.printStackTrace();
+    			}
+    		}			
+        }
+    }
+    
+    public void copyPhotos(File copyDir) {
+    	
+		// go through each photo. If flag set, then do the copy
+		for (Photo photo : photos){
+			//Is there a copy flag set?
+			if(photo.getCopyFlag() == true) {
+				try {
+					//source file comes from a different place based on whether photos were cropped or not
+					photo.copyPhoto(copyDir);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}			
+		}
+    }
+    
     
 	public void exportPhotoTags(PrintWriter csvFile) {
 		//this method goes through all the photos and writes out the tag info into a csv file and writes the tags to the photo
