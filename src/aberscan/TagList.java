@@ -12,7 +12,7 @@ import javax.swing.JOptionPane;
 
 public class TagList {
 	String[] tags;
-	final int numTags = 10;
+	final int numTags = 20;
 	
 	public String getText(int i) {return tags[i]; }
 	public void setText(int i, String tag) { tags[i] = tag.trim();}
